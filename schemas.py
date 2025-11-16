@@ -11,8 +11,8 @@ Model name is converted to lowercase for the collection name:
 - BlogPost -> "blogs" collection
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, HttpUrl
+from typing import Optional, List
 
 # Example schemas (replace with your own):
 
@@ -38,11 +38,18 @@ class Product(BaseModel):
     category: str = Field(..., description="Product category")
     in_stock: bool = Field(True, description="Whether product is in stock")
 
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+# Custom schema for the furniture shop (Serbian fields)
+class FurnitureProduct(BaseModel):
+    """
+    Kolekcija: "furnitureproduct"
+    Schema za proizvode nameštaja po meri
+    """
+    naziv: str = Field(..., description="Naziv proizvoda")
+    opis: Optional[str] = Field(None, description="Opis proizvoda")
+    cena: float = Field(..., ge=0, description="Cena u EUR")
+    kategorija: str = Field(..., description="Kategorija (npr. kuhinja, ormar, komoda)")
+    dimenzije: Optional[str] = Field(None, description="Dimenzije (npr. 200x60x40 cm)")
+    materijal: Optional[str] = Field(None, description="Materijal (npr. puno drvo, medijapan)")
+    slike: Optional[List[HttpUrl]] = Field(default_factory=list, description="URL slike proizvoda")
+    istaknuto: bool = Field(False, description="Da li je proizvod istaknut")
+    dostupno: bool = Field(True, description="Dostupnost proizvoda")
