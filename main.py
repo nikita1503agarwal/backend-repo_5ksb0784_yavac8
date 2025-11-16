@@ -116,6 +116,65 @@ def import_products(req: ImportRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/products/import/demo", response_model=dict)
+def import_demo_products():
+    """Seed/demo import kada nema JSON izvora. Ubacuje nekoliko primer proizvoda."""
+    try:
+        demo = [
+            {
+                'naziv': 'Kuhinjski Element "Dunav"',
+                'opis': 'Moderna kuhinjska donja komoda sa tiho-zatvarajućim šarkama.',
+                'cena': 420.0,
+                'kategorija': 'kuhinja',
+                'dimenzije': '80x60x90 cm',
+                'materijal': 'MDF, bukva',
+                'slike': [
+                    'https://images.unsplash.com/photo-1556909212-d5b604d0c46e',
+                    'https://images.unsplash.com/photo-1555041469-a586c61ea9bc'
+                ],
+                'istaknuto': True,
+                'dostupno': True
+            },
+            {
+                'naziv': 'Ormar "Avalski"',
+                'opis': 'Ugradni ormar sa kliznim vratima i ogledalom.',
+                'cena': 890.0,
+                'kategorija': 'ormar',
+                'dimenzije': '220x200x60 cm',
+                'materijal': 'Iverica premium, aluminijum',
+                'slike': ['https://images.unsplash.com/photo-1582582621959-48c79f2465f0'],
+                'istaknuto': False,
+                'dostupno': True
+            },
+            {
+                'naziv': 'Komoda "Tisa"',
+                'opis': 'Niska TV komoda sa tri fioke i otvorenim policama.',
+                'cena': 310.0,
+                'kategorija': 'komoda',
+                'dimenzije': '160x45x45 cm',
+                'materijal': 'Hrast masiv + furnir',
+                'slike': ['https://images.unsplash.com/photo-1505692794403-34d4982f88aa'],
+                'istaknuto': True,
+                'dostupno': True
+            },
+            {
+                'naziv': 'Radni sto "Morava"',
+                'opis': 'Minimalistički radni sto sa skrivenim kanalom za kablove.',
+                'cena': 260.0,
+                'kategorija': 'radni sto',
+                'dimenzije': '140x70x75 cm',
+                'materijal': 'Jasen masiv',
+                'slike': ['https://images.unsplash.com/photo-1493666438817-866a91353ca9'],
+                'istaknuto': False,
+                'dostupno': True
+            }
+        ]
+        ids = create_documents("furnitureproduct", demo)
+        return {"inserted": len(ids), "status": "ok", "demo": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/test")
 def test_database():
     """Test endpoint to check if database is available and accessible"""
