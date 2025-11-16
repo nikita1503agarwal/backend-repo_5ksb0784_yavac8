@@ -9,7 +9,7 @@ from pymongo import MongoClient
 from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
-from typing import Union
+from typing import Union, List
 from pydantic import BaseModel
 
 # Load environment variables from .env file
@@ -26,22 +26,40 @@ if database_url and database_name:
     db = _client[database_name]
 
 # Helper functions for common database operations
+def _to_dict(data: Union[BaseModel, dict]):
+    if isinstance(data, BaseModel):
+        return data.model_dump()
+    return data.copy()
+
+
 def create_document(collection_name: str, data: Union[BaseModel, dict]):
     """Insert a single document with timestamp"""
     if db is None:
         raise Exception("Database not available. Check DATABASE_URL and DATABASE_NAME environment variables.")
 
-    # Convert Pydantic model to dict if needed
-    if isinstance(data, BaseModel):
-        data_dict = data.model_dump()
-    else:
-        data_dict = data.copy()
-
+    data_dict = _to_dict(data)
     data_dict['created_at'] = datetime.now(timezone.utc)
     data_dict['updated_at'] = datetime.now(timezone.utc)
 
     result = db[collection_name].insert_one(data_dict)
     return str(result.inserted_id)
+
+
+def create_documents(collection_name: str, data_list: List[Union[BaseModel, dict]]):
+    """Insert many documents with timestamps. Returns list of inserted ids as strings."""
+    if db is None:
+        raise Exception("Database not available. Check DATABASE_URL and DATABASE_NAME environment variables.")
+
+    docs = []
+    now = datetime.now(timezone.utc)
+    for d in data_list:
+        doc = _to_dict(d)
+        doc['created_at'] = now
+        doc['updated_at'] = now
+        docs.append(doc)
+    result = db[collection_name].insert_many(docs)
+    return [str(_id) for _id in result.inserted_ids]
+
 
 def get_documents(collection_name: str, filter_dict: dict = None, limit: int = None):
     """Get documents from collection"""

@@ -3,8 +3,9 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import requests
 
-from database import create_document, get_documents
+from database import create_document, get_documents, create_documents
 from schemas import FurnitureProduct
 
 app = FastAPI(title="OD Nameštaj API", description="API za prodaju nameštaja po meri")
@@ -57,6 +58,63 @@ def list_products(
         return docs
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class ImportRequest(BaseModel):
+    url: str
+
+@app.post("/api/products/import", response_model=dict)
+def import_products(req: ImportRequest):
+    """Uvozi proizvode sa zadatog URL-a (očekuje JSON listu objekata). Pokušava mapiranje polja."""
+    try:
+        r = requests.get(req.url, timeout=15)
+        if r.status_code != 200:
+            raise HTTPException(status_code=400, detail=f"Ne mogu da preuzmem podatke: {r.status_code}")
+        data = r.json()
+        if not isinstance(data, list):
+            raise HTTPException(status_code=400, detail="Očekivana je lista proizvoda u JSON formatu")
+
+        mapped = []
+        for item in data:
+            # Pokušaj mapiranja raznih mogućih ključeva na našu šemu
+            naziv = item.get('naziv') or item.get('title') or item.get('name') or 'Proizvod'
+            opis = item.get('opis') or item.get('description')
+            cena = item.get('cena') or item.get('price') or 0
+            try:
+                cena = float(cena)
+            except Exception:
+                cena = 0.0
+            kategorija = (item.get('kategorija') or item.get('category') or 'ostalo').lower()
+            dimenzije = item.get('dimenzije') or item.get('dimensions')
+            materijal = item.get('materijal') or item.get('material')
+            slike = item.get('slike') or item.get('images') or []
+            if isinstance(slike, str):
+                slike = [slike]
+            istaknuto = bool(item.get('istaknuto') or item.get('featured') or False)
+            dostupno = bool(item.get('dostupno') if 'dostupno' in item else item.get('available', True))
+
+            mapped.append({
+                'naziv': naziv,
+                'opis': opis,
+                'cena': cena,
+                'kategorija': kategorija,
+                'dimenzije': dimenzije,
+                'materijal': materijal,
+                'slike': slike,
+                'istaknuto': istaknuto,
+                'dostupno': dostupno,
+            })
+
+        if not mapped:
+            return {"inserted": 0, "status": "no-data"}
+
+        ids = create_documents("furnitureproduct", mapped)
+        return {"inserted": len(ids), "status": "ok"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/test")
 def test_database():
